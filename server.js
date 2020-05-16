@@ -30,6 +30,7 @@ const hasOwnProperty = Object.prototype.hasOwnProperty
  * @param {boolean} opts.udp        start a udp server? (default: true)
  * @param {boolean} opts.ws         start a websocket server? (default: true)
  * @param {boolean} opts.stats      enable web-based statistics? (default: true)
+ * @param {boolean} opts.globalScrape allow all tracked torrents to be listed (default: false)
  * @param {function} opts.filter    black/whitelist fn for disallowing/allowing torrents
  */
 class Server extends EventEmitter {
@@ -46,6 +47,7 @@ class Server extends EventEmitter {
 
     this.peersCacheLength = opts.peersCacheLength
     this.peersCacheTtl = opts.peersCacheTtl
+    this.globalScrape = opts.globalScrape
 
     this._listenCalled = false
     this.listening = false
@@ -702,9 +704,12 @@ class Server extends EventEmitter {
 
   _onScrape (params, cb) {
     if (params.info_hash == null) {
-      // if info_hash param is omitted, stats for all torrents are returned
-      // TODO: make this configurable!
-      params.info_hash = Object.keys(this.torrents)
+      if (this.globalScrape) {
+        // if info_hash param is omitted, stats for all torrents are returned
+        params.info_hash = Object.keys(this.torrents)
+      } else {
+        params.info_hash = [];
+      }
     }
 
     series(params.info_hash.map(infoHash => {
